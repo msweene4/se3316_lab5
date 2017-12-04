@@ -12,19 +12,118 @@ var bodyParser = require('body-parser');
 // this will let us get the data from a POST
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+const cors = require('cors');
+app.use(cors());
 
-var port = 8008;// set our port
+var port = 8081;        // set our port
+
+var mongoose   = require('mongoose');
+mongoose.Promise = global.Promise;
+mongoose.connect('mongodb://localhost:27017/users', { useMongoClient: true });
+//mongoose.connect('mongodb://node:node@novus.modulusmongo.net:27017/Iganiq8o'); // connect to our database
+
+var temps     = require('../app/models/temp');
 
 // ROUTES FOR OUR API
 // =============================================================================
 var router = express.Router();              // get an instance of the express Router
 
-// test route to make sure everything is working (accessed at GET http://localhost:8080/api)
-router.get('/', function(req, res) {
-    res.json({ message: 'hooray! welcome to our api!' });   
+// serve files in static' folder at root URL '/'
+app.use('/', express.static('static'));
+
+// middleware to use for all requests
+router.use(function(req, res, next) {
+    // do logging
+    console.log('Something is happening.');
+    
+    next(); // make sure we go to the next routes and don't stop here
 });
 
+
 // more routes for our API will happen here
+
+// on routes that end in /bears
+// ----------------------------------------------------
+router.route('/Temp')
+
+    // create a bear (accessed at POST http://localhost:8080/api/bears)
+    .post(function(req, res) {
+
+        var t = new temps();      // create a new instance of the Bear model
+        t.Email = req.body.Email;  
+        t.Password = req.body.Password;
+
+        // save the bear and check for errors
+        t.save(function(err) {
+            if (err){
+                res.send(err); 
+            }
+            res.json({ message: 'Sent' });
+        });
+
+    })
+    
+    // get all the bears (accessed at GET http://localhost:8080/api/user_class)
+    .get(function(req, res) {
+        temps.find(function(err, user_class) {
+            if (err){
+                res.send(err);
+            }
+            res.json(user_class);
+        });
+    });
+    
+// on routes that end in /bears/:bear_id
+// ----------------------------------------------------
+router.route('/Temp/:t_id')
+
+    // get the bear with that id (accessed at GET http://localhost:8080/api/bears/:bear_id)
+    .get(function(req, res) {
+        temps.findById(req.params.t_id, function(err, t) {
+            if (err){
+                res.send(err);
+            }
+            res.json(t);
+        });
+    })
+    
+    // update the bear with this id (accessed at PUT http://localhost:8080/api/bears/:bear_id)
+    .put(function(req, res) {
+
+        // use our bear model to find the bear we want
+        temps.findById(req.params.t_id, function(err, t) {
+
+            if (err){
+                res.send(err);
+            }
+
+            t.Email = req.body.message;  // set the bears name (comes from the request)
+            t.Password = req.body.message;
+
+            // save the bear
+            t.save(function(err) {
+                if (err){
+                    res.send(err);
+                }
+
+                res.json({ message: 'Updated!' });
+            });
+
+        });
+    })
+    
+    // delete the bear with this id (accessed at DELETE http://localhost:8080/api/bears/:bear_id)
+    .delete(function(req, res) {
+        temps.remove({
+            _id: req.params.t_id
+        }, function(err, comm) {
+            if (err){
+                res.send(err);
+            }
+
+            res.json({ message: 'Successfully deleted' });
+        });
+    });
 
 // REGISTER OUR ROUTES -------------------------------
 // all of our routes will be prefixed with /api
